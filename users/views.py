@@ -29,30 +29,22 @@ class UserAuthAPIView(APIView):
         message = f"На указанный Вами номер телефона отправлено SMS с кодом доступа."
         try:
             if serializer.is_valid():
-                # пользователь отсутствует в базе
                 new_user = User.objects.create(phone=serializer.validated_data["phone"])
                 new_user.auth_code = generate_auth_code()
                 new_user.invite_code = generate_invite_code()
-                new_user.set_password(
-                    new_user.auth_code
-                )  # из кода аутентификации сделать пароль
+                new_user.set_password(new_user.auth_code)
                 new_user.save()
                 time.sleep(2)
-                # здесь вставить отправку кода на телефон
                 return Response(
                     {"message": message, "test_code": new_user.auth_code},
                     status=status.HTTP_201_CREATED,
                 )
             else:
-                # пользователь есть в базе
                 user = User.objects.get(phone=serializer.data["phone"])
                 user.auth_code = generate_auth_code()  # обновить код доступа
-                user.set_password(
-                    user.auth_code
-                )  # обновить пароль из нового кода доступа
+                user.set_password(user.auth_code)
                 user.save()
                 time.sleep(2)
-                # здесь вставить отправку кода на телефон
                 return Response(
                     {"message": message, "test_code": user.auth_code},
                     status=status.HTTP_200_OK,
@@ -69,7 +61,6 @@ class UserAuthAPIView(APIView):
         if serializer.is_valid():
             code = serializer.validated_data["auth_code"]
             user = User.objects.filter(auth_code=code)
-            # если пользователь с таким кодом есть --> активировать и аутентифицировать
             if user:
                 user.update(is_active=True, is_authenticate=True)
                 return Response(
@@ -98,12 +89,8 @@ class UserProfileUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
             )
         else:
             try:
-                referral_user = User.objects.get(
-                    invite_code=data["referral_code"]
-                )  # тот, кто привел
-                current_user = User.objects.get(
-                    id=request.user.id
-                )  # текущий пользователь
+                referral_user = User.objects.get(invite_code=data["referral_code"])
+                current_user = User.objects.get(id=request.user.id)
                 if current_user.referrals:
                     return Response(
                         {"message": "Вы уже использовали invite код."},

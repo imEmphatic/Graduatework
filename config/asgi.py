@@ -1,11 +1,7 @@
-import os  # Модуль os для работы с операционной системой, например, для доступа к переменным окружения
+import os
 
-from django.core.asgi import (
-    get_asgi_application,
-)  # Импортируем функцию для получения ASGI-приложения Django
+from django.core.asgi import get_asgi_application
 
-# Устанавливаем переменную окружения DJANGO_SETTINGS_MODULE, указывающую на настройки проекта Django
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-# Получаем ASGI-приложение для запуска асинхронного сервера
 application = get_asgi_application()

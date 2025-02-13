@@ -8,7 +8,6 @@ class UserTestCase(APITestCase):
     """Тестирование для User"""
 
     def setUp(self) -> None:
-        # пользователи для теста
         self.user1 = User.objects.create(
             phone="+79051122333",
             invite_code="q1W2er",
@@ -63,19 +62,16 @@ class UserTestCase(APITestCase):
 
     def test_errors_auth_user(self):
         """Тест для проверки ошибок авторизации пользователя"""
-        # номер начинается не на +7
         data_post = {"phone": "+19531112244"}
         response = self.client.post("/api/users/login/", data=data_post)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.json(), {"message": "Не верный запрос."})
 
-        # пустое поле
         data_post2 = {"phone": ""}
         response2 = self.client.post("/api/users/login/", data=data_post2)
         self.assertEqual(response2.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response2.json(), {"message": "Не верный запрос."})
 
-        # не верный код
         data_post = {"phone": "+79051122333"}
         response = self.client.post("/api/users/login/", data=data_post)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -230,16 +226,14 @@ class UserTestCase(APITestCase):
 
     def test_delete_user(self):
         """Тест на удаление пользователя"""
-        # удаление чужого профиля
         self.client.force_authenticate(user=self.user2)
         response = self.client.delete(f"/api/users/{self.user1.id}/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        # удаление своего профиля
+
         self.client.force_authenticate(user=self.user2)
         response = self.client.delete(f"/api/users/{self.user2.id}/")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        # удаление пользователя модератором
         self.client.force_authenticate(user=self.moder)
         response = self.client.delete(f"/api/users/{self.user1.id}/")
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)

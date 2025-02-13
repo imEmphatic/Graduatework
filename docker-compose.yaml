@@ -1,20 +1,20 @@
-version: '3'  # Версия используемой схемы для Docker Compose
+version: '3'
 
-services:  # Определение сервисов, которые будут запущены
-  database:  # Сервис базы данных
-    container_name: postgres  # Имя контейнера для базы данных
-    image: postgres  # Официальный образ PostgreSQL
-    environment:  # Переменные окружения для настройки базы данных
-      - POSTGRES_DB=${DB_NAME}  # Название базы данных
-      - POSTGRES_USER=${DB_USER}  # Имя пользователя для базы данных
-      - POSTGRES_PASSWORD=${DB_PASSWORD}  # Пароль для пользователя базы данных
+services:
+  database:
+    container_name: postgres
+    image: postgres
+    environment:
+      - POSTGRES_DB=${DB_NAME}
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
     ports:
-      - '5432:5432'  # Прокси-порты для доступа к базе данных
+      - '5432:5432'
 
-  app:  # Сервис приложения (например, Django)
-    container_name: auth_service  # Имя контейнера для приложения
-    build: .  # Строим контейнер из текущей директории
+  app:
+    container_name: auth_service
+    build: .
     ports:
-      - '8000:8000'  # Прокси-порты для доступа к приложению
-    depends_on:  # Сервис зависит от базы данных, будет запущен после неё
-      database:  # Указывает, что сервис приложения зависит от базы данных
+      - '8000:8000'
+    depends_on:
+      database:
