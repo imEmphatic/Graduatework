@@ -7,6 +7,7 @@ from django.utils.timezone import now
 
 NULLABLE = {"null": True, "blank": True}
 
+
 class UserManager(BaseUserManager):
     """Менеджер для модели User."""
 
@@ -40,6 +41,7 @@ class UserManager(BaseUserManager):
             raise ValueError("Superuser must have is_superuser=True.")
         return self._create_user(phone, password, **extra_fields)
 
+
 class User(AbstractUser):
     """Модель для сущности User (Пользователь)"""
 
@@ -50,15 +52,25 @@ class User(AbstractUser):
     avatar = models.ImageField(upload_to="users/", verbose_name="Аватар", **NULLABLE)
     phone = models.CharField(max_length=35, unique=True, verbose_name="Номер телефона")
     city = models.CharField(max_length=50, verbose_name="Город", **NULLABLE)
-    telegram_id = models.CharField(max_length=100, verbose_name="Телеграм ID", **NULLABLE)
-    invite_code = models.CharField(max_length=6, unique=True, verbose_name="Invite код", **NULLABLE)
-    referral_code = models.CharField(max_length=6, verbose_name="Код реферала", **NULLABLE)
-    referrals = models.ForeignKey("self", on_delete=models.SET_NULL, verbose_name="Рефералы", **NULLABLE)
+    telegram_id = models.CharField(
+        max_length=100, verbose_name="Телеграм ID", **NULLABLE
+    )
+    invite_code = models.CharField(
+        max_length=6, unique=True, verbose_name="Invite код", **NULLABLE
+    )
+    referral_code = models.CharField(
+        max_length=6, verbose_name="Код реферала", **NULLABLE
+    )
+    referrals = models.ForeignKey(
+        "self", on_delete=models.SET_NULL, verbose_name="Рефералы", **NULLABLE
+    )
 
     is_active = models.BooleanField(default=False, verbose_name="Состояние активности")
     is_staff = models.BooleanField(default=False, verbose_name="Сотрудник")
     is_superuser = models.BooleanField(default=False, verbose_name="Администратор")
-    is_authenticate = models.BooleanField(default=False, verbose_name="Признак авторизации")
+    is_authenticate = models.BooleanField(
+        default=False, verbose_name="Признак авторизации"
+    )
 
     USERNAME_FIELD = "phone"
     REQUIRED_FIELDS = []
@@ -70,8 +82,10 @@ class User(AbstractUser):
         verbose_name = "Пользователь"
         verbose_name_plural = "Пользователи"
 
+
 class AuthCode(models.Model):
     """Модель для хранения кодов авторизации"""
+
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="auth_codes")
     code = models.CharField(max_length=6, verbose_name="Код авторизации")
     created_at = models.DateTimeField(default=now, verbose_name="Дата создания")

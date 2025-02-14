@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from users.models import User, AuthCode
+from users.models import AuthCode, User
 from users.permissions import IsOwner, IsUserStaff
 from users.serializers import (
     UserProfileSerializer,
@@ -32,41 +32,37 @@ class UserAuthAPIView(APIView):
         user, created = User.objects.get_or_create(phone=phone)
 
         auth_code = generate_auth_code()
-
         AuthCode.objects.create(user=user, code=auth_code)
-
-        print(f"Код для {phone}: {auth_code}")
+        print(f"Код авторизации для {phone}: {auth_code}")
 
         if created:
             user.invite_code = generate_invite_code()
-            user.set_unusable_password()
             user.save()
 
         time.sleep(2)
-
-        return Response({}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+        return Response(
+            {}, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK
+        )
 
     @swagger_auto_schema(request_body=UserVerifySerializer)
     def put(self, request, *args, **kwargs):
         """Метод для отправки на сервер полученного кода авторизации"""
         serializer = UserVerifySerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data.get("phone")
         code = serializer.validated_data.get("auth_code")
 
         try:
-            user = User.objects.get(phone=phone)
-            auth_code = AuthCode.objects.get(user=user, code=code)
-        except (User.DoesNotExist, AuthCode.DoesNotExist):
+            auth_code_obj = AuthCode.objects.get(user__phone=phone, code=code)
+        except AuthCode.DoesNotExist:
             return Response(
                 {"message": "Доступ запрещен. Неверный код или номер телефона."},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        auth_code.delete()
+        user = auth_code_obj.user
+        auth_code_obj.delete()
 
         refresh = RefreshToken.for_user(user)
         access_token = str(refresh.access_token)
@@ -79,3 +75,46 @@ class UserAuthAPIView(APIView):
             },
             status=status.HTTP_200_OK,
         )
+
+
+class UserProfileUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Представление для получения и обновления профиля пользователя"""
+
+    serializer_class = UserProfileSerializer
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated, IsOwner | IsUserStaff]
+
+    def update(self, request, *args, **kwargs):
+        """Метод для обновления профиля пользователя"""
+        data = request.data
+        if "referral_code" not in data:
+            return super().update(request, *args, **kwargs)
+
+        try:
+            referral_user = User.objects.get(invite_code=data["referral_code"])
+            current_user = request.user
+
+            if current_user.referrals:
+                return Response(
+                    {"message": "Вы уже использовали invite-код."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            current_user.referrals = referral_user
+            current_user.referral_code = data["referral_code"]
+            current_user.save()
+            return super().update(request, *args, **kwargs)
+
+        except User.DoesNotExist:
+            return Response(
+                {"message": "Неверный invite-код."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+
+class UserListAPIView(generics.ListAPIView):
+    """Представление для отображения списка пользователей для модератора"""
+
+    serializer_class = UserStaffSerializer
+    queryset = User.objects.all()
+    permission_classes = [IsAuthenticated, IsUserStaff]

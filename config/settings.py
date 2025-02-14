@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 dot_env = os.path.join(BASE_DIR, ".env")
-load_dotenv(dotenv_path=BASE_DIR.joinpath('.env'))
+load_dotenv(dotenv_path=BASE_DIR.joinpath(".env"))
 
 
 SECRET_KEY = os.getenv("SECRET_KEY")
