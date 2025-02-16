@@ -29,15 +29,13 @@ class UserAuthAPIView(APIView):
         serializer.is_valid(raise_exception=True)
 
         phone = serializer.validated_data["phone"]
-        user, created = User.objects.get_or_create(phone=phone)
+        user, created = User.objects.get_or_create(
+            phone=phone, defaults={"invite_code": generate_invite_code()}
+        )
 
         auth_code = generate_auth_code()
         AuthCode.objects.create(user=user, code=auth_code)
         print(f"Код авторизации для {phone}: {auth_code}")
-
-        if created:
-            user.invite_code = generate_invite_code()
-            user.save()
 
         time.sleep(2)
         return Response(
@@ -53,9 +51,8 @@ class UserAuthAPIView(APIView):
         phone = serializer.validated_data.get("phone")
         code = serializer.validated_data.get("auth_code")
 
-        try:
-            auth_code_obj = AuthCode.objects.get(user__phone=phone, code=code)
-        except AuthCode.DoesNotExist:
+        auth_code_obj = AuthCode.objects.filter(user__phone=phone, code=code).last()
+        if not auth_code_obj:
             return Response(
                 {"message": "Доступ запрещен. Неверный код или номер телефона."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -83,33 +80,6 @@ class UserProfileUpdateDeleteAPIView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = UserProfileSerializer
     queryset = User.objects.all()
     permission_classes = [IsAuthenticated, IsOwner | IsUserStaff]
-
-    def update(self, request, *args, **kwargs):
-        """Метод для обновления профиля пользователя"""
-        data = request.data
-        if "referral_code" not in data:
-            return super().update(request, *args, **kwargs)
-
-        try:
-            referral_user = User.objects.get(invite_code=data["referral_code"])
-            current_user = request.user
-
-            if current_user.referrals:
-                return Response(
-                    {"message": "Вы уже использовали invite-код."},
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-            current_user.referrals = referral_user
-            current_user.referral_code = data["referral_code"]
-            current_user.save()
-            return super().update(request, *args, **kwargs)
-
-        except User.DoesNotExist:
-            return Response(
-                {"message": "Неверный invite-код."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
 
 
 class UserListAPIView(generics.ListAPIView):
